@@ -17,6 +17,7 @@ final class Settings {
     var doneSymbol: String = "/"
     var doneLabel: String = "done"
     var useSymbols: Bool = false
+    var inactivePanelOpacity: Double = 0.9
     
     init() {}
 }

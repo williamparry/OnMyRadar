@@ -20,11 +20,13 @@ final class Item {
     var status: TaskStatus
     var createdAt: Date
     var updatedAt: Date
+    var order: Int
     
-    init(title: String, status: TaskStatus = .todo) {
+    init(title: String, status: TaskStatus = .todo, order: Int = 0) {
         self.title = title
         self.status = status
         self.createdAt = Date()
         self.updatedAt = Date()
+        self.order = order
     }
 }

@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		3DE6848C2E0B60EB00A541B1 /* OnMyRadar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OnMyRadar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3DE6848C2E0B60EB00A541B1 /* On My Radar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "On My Radar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		3DE6848E2E0B60EB00A541B1 /* OnMyRadar */ = {
+		3DE6848E2E0B60EB00A541B1 /* On My Radar */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = OnMyRadar;
+			path = "On My Radar";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		3DE684832E0B60EB00A541B1 = {
 			isa = PBXGroup;
 			children = (
-				3DE6848E2E0B60EB00A541B1 /* OnMyRadar */,
+				3DE6848E2E0B60EB00A541B1 /* On My Radar */,
 				3DE6848D2E0B60EB00A541B1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -40,7 +40,7 @@
 		3DE6848D2E0B60EB00A541B1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3DE6848C2E0B60EB00A541B1 /* OnMyRadar.app */,
+				3DE6848C2E0B60EB00A541B1 /* On My Radar.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3DE6848B2E0B60EB00A541B1 /* OnMyRadar */ = {
+		3DE6848B2E0B60EB00A541B1 /* On My Radar */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3DE6849A2E0B60EC00A541B1 /* Build configuration list for PBXNativeTarget "OnMyRadar" */;
+			buildConfigurationList = 3DE6849A2E0B60EC00A541B1 /* Build configuration list for PBXNativeTarget "On My Radar" */;
 			buildPhases = (
 				3DE684882E0B60EB00A541B1 /* Sources */,
 				3DE684892E0B60EB00A541B1 /* Frameworks */,
@@ -61,13 +61,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				3DE6848E2E0B60EB00A541B1 /* OnMyRadar */,
+				3DE6848E2E0B60EB00A541B1 /* On My Radar */,
 			);
-			name = OnMyRadar;
+			name = "On My Radar";
 			packageProductDependencies = (
 			);
 			productName = OnMyRadar;
-			productReference = 3DE6848C2E0B60EB00A541B1 /* OnMyRadar.app */;
+			productReference = 3DE6848C2E0B60EB00A541B1 /* On My Radar.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 3DE684872E0B60EB00A541B1 /* Build configuration list for PBXProject "OnMyRadar" */;
+			buildConfigurationList = 3DE684872E0B60EB00A541B1 /* Build configuration list for PBXProject "On My Radar" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				3DE6848B2E0B60EB00A541B1 /* OnMyRadar */,
+				3DE6848B2E0B60EB00A541B1 /* On My Radar */,
 			);
 		};
 /* End PBXProject section */
@@ -250,7 +250,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = OnMyRadar/OnMyRadar.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "On My Radar/OnMyRadar.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -258,6 +259,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "On My Radar";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -278,7 +281,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = OnMyRadar/OnMyRadar.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "On My Radar/OnMyRadar.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -286,6 +290,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "On My Radar";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -304,7 +310,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		3DE684872E0B60EB00A541B1 /* Build configuration list for PBXProject "OnMyRadar" */ = {
+		3DE684872E0B60EB00A541B1 /* Build configuration list for PBXProject "On My Radar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3DE684982E0B60EC00A541B1 /* Debug */,
@@ -313,7 +319,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3DE6849A2E0B60EC00A541B1 /* Build configuration list for PBXNativeTarget "OnMyRadar" */ = {
+		3DE6849A2E0B60EC00A541B1 /* Build configuration list for PBXNativeTarget "On My Radar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3DE6849B2E0B60EC00A541B1 /* Debug */,

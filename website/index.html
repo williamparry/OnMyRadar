@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On My Radar - Simple Task Management for macOS</title>
+    <meta name="description" content="A simple, elegant task manager that lives in your menu bar. Keep track of what's on your radar with quick access to your tasks.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icon-16.png">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-content">
+                    <div class="logo">
+                        <img src="assets/app-icon.png" alt="On My Radar" class="app-icon-nav">
+                        <span>On My Radar</span>
+                    </div>
+                    <a href="#download" class="download-btn">Download</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="hero-content">
+                <img src="assets/app-icon.png" alt="On My Radar Icon" class="app-icon">
+                <h1>Keep tasks on your radar</h1>
+                <p class="subtitle">A simple, elegant task manager that lives in your macOS menu bar. Track what matters with just a click.</p>
+                <div class="download-section">
+                    <a href="#" class="download-btn primary">
+                        <svg class="apple-logo" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                        </svg>
+                        Download for macOS
+                    </a>
+                    <p class="system-req">Requires macOS 14.0 or later</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-image">
+            <img src="assets/hero-screenshot.png" alt="On My Radar Screenshot" class="screenshot">
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Everything you need, nothing you don't</h2>
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>Access your tasks instantly from the menu bar. No loading screens, no delays.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="9" y1="9" x2="15" y2="9"/>
+                            <line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <h3>Minimal Interface</h3>
+                    <p>Clean, focused design that stays out of your way until you need it.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <h3>Status Tracking</h3>
+                    <p>Track tasks as "on me", "waiting", or "done" with visual indicators.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                    </div>
+                    <h3>Keyboard Shortcuts</h3>
+                    <p>Global hotkey support for quick access without touching the mouse.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v6m0 6v6m11-11h-6m-6 0H1"/>
+                        </svg>
+                    </div>
+                    <h3>Customizable</h3>
+                    <p>Personalize status labels, choose symbols or text, and adjust transparency.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                    </div>
+                    <h3>Native Performance</h3>
+                    <p>Built with SwiftUI for optimal performance and battery efficiency.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2>Simple by design</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Click the menu bar icon</h3>
+                    <p>Access your tasks instantly from anywhere on your Mac</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Add and manage tasks</h3>
+                    <p>Type to add, click to edit</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Track progress</h3>
+                    <p>Click status indicators to cycle through states</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta" id="download">
+        <div class="container">
+            <h2>Start tracking what matters</h2>
+            <p class="cta-subtitle">Free to use. No account required. Your data stays on your Mac.</p>
+            <a href="#" class="download-btn primary large">
+                <svg class="apple-logo" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                Download for macOS
+            </a>
+            <p class="system-req">Requires macOS 14.0 or later • Apple Silicon & Intel</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="assets/app-icon.png" alt="On My Radar" class="footer-icon">
+                    <p>© 2025 William Parry. All rights reserved.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/williamparry/OnMyRadar">GitHub</a>
+                    <a href="#privacy">Privacy</a>
+                    <a href="#support">Support</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

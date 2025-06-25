@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State private var waitingLabel = "waiting"
     @State private var doneSymbol = "/"
     @State private var doneLabel = "done"
+    @State private var inactivePanelOpacity = 0.9
     
     
     var onSave: (() -> Void)?
@@ -63,6 +64,16 @@ struct SettingsView: View {
                         Spacer()
                         ShortcutRecorderView(keyCode: $globalHotkeyKeyCode, modifiers: $globalHotkeyModifiers)
                             .frame(width: 150, height: 22)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Inactive panel transparency:")
+                        HStack {
+                            Slider(value: $inactivePanelOpacity, in: 0.1...1.0, step: 0.1)
+                            Text("\(Int(inactivePanelOpacity * 100))%")
+                                .frame(width: 40, alignment: .trailing)
+                                .monospacedDigit()
+                        }
                     }
                 } header: {
                     Text("General")
@@ -107,6 +118,10 @@ struct SettingsView: View {
                     doneSymbol = "/"
                     doneLabel = "done"
                     useSymbols = false
+                    inactivePanelOpacity = 0.9
+                    
+                    // Reset panel position
+                    NotificationCenter.default.post(name: NSNotification.Name("ResetPanelPosition"), object: nil)
                 }
                 
                 Spacer()
@@ -119,7 +134,7 @@ struct SettingsView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
-        .frame(width: 400, height: 400)
+        .frame(width: 400, height: 450)
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
             loadSettings()
@@ -136,6 +151,7 @@ struct SettingsView: View {
             waitingLabel = settings.waitingLabel
             doneSymbol = settings.doneSymbol
             doneLabel = settings.doneLabel
+            inactivePanelOpacity = settings.inactivePanelOpacity
         }
     }
     
@@ -155,6 +171,7 @@ struct SettingsView: View {
         settingsToSave.waitingLabel = waitingLabel
         settingsToSave.doneSymbol = doneSymbol
         settingsToSave.doneLabel = doneLabel
+        settingsToSave.inactivePanelOpacity = inactivePanelOpacity
         
         do {
             try modelContext.save()

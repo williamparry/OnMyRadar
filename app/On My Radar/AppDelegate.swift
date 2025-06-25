@@ -88,17 +88,28 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     private let modelContainer: ModelContainer
     private var settingsWindow: NSWindow?
+    private var aboutWindow: NSWindow?
+    weak var menuBarController: MenuBarController?
     
     private let windowFrameKey = "OnMyRadarWindowFrame"
+    
+    var isPanelKeyWindow: Bool {
+        return panel?.isKeyWindow ?? false
+    }
     
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
         super.init()
         setupPanel()
+        
+        // Listen for reset panel position notification
+        NotificationCenter.default.addObserver(self, selector: #selector(resetPanelPosition), name: NSNotification.Name("ResetPanelPosition"), object: nil)
     }
     
     private func setupPanel() {
-        let contentView = NSHostingView(rootView: MenuBarView()
+        let contentView = NSHostingView(rootView: MenuBarView(onTaskCountChanged: { [weak self] count in
+            self?.menuBarController?.updateTaskCount(count)
+        })
             .modelContainer(modelContainer))
         
         // Get saved frame or use default
@@ -118,7 +129,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         panel?.level = .floating
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel?.isMovableByWindowBackground = true
-        panel?.backgroundColor = .windowBackgroundColor
+        panel?.backgroundColor = NSColor.black.withAlphaComponent(0.85)
         panel?.isOpaque = true
         panel?.hasShadow = true
         panel?.delegate = self
@@ -145,11 +156,15 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     func toggle() {
         if panel?.isVisible == true {
             panel?.close()
+            NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeInactive"), object: nil)
         } else {
             panel?.makeKeyAndOrderFront(nil)
             panel?.orderFrontRegardless()
             // Activate the app to receive keyboard input
             NSApp.activate(ignoringOtherApps: true)
+            // Set initial opacity
+            panel?.alphaValue = 1.0
+            NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
         }
     }
     
@@ -172,6 +187,27 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         if let frame = panel?.frame {
             UserDefaults.standard.set(NSStringFromRect(frame), forKey: windowFrameKey)
         }
+    }
+    
+    func windowDidBecomeKey(_ notification: Notification) {
+        // Set full opacity when window becomes active
+        panel?.animator().alphaValue = 1.0
+        NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
+    }
+    
+    func windowDidResignKey(_ notification: Notification) {
+        // Set custom opacity when window becomes inactive
+        let context = modelContainer.mainContext
+        let request = FetchDescriptor<Settings>()
+        
+        do {
+            let settings = try context.fetch(request).first
+            let opacity = settings?.inactivePanelOpacity ?? 0.9
+            panel?.animator().alphaValue = opacity
+        } catch {
+            panel?.animator().alphaValue = 0.9
+        }
+        NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeInactive"), object: nil)
     }
     
     func showSettings() {
@@ -197,6 +233,46 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         }
         
         settingsWindow?.makeKeyAndOrderFront(nil)
+        settingsWindow?.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @objc private func resetPanelPosition() {
+        if let screen = NSScreen.main {
+            let screenFrame = screen.visibleFrame
+            let panelFrame = panel?.frame ?? NSRect(x: 0, y: 0, width: 320, height: 200)
+            let x = screenFrame.maxX - panelFrame.width - 20
+            let y = screenFrame.maxY - panelFrame.height - 40
+            panel?.setFrameOrigin(NSPoint(x: x, y: y))
+            
+            // Save the new position
+            if let frame = panel?.frame {
+                UserDefaults.standard.set(NSStringFromRect(frame), forKey: windowFrameKey)
+            }
+        }
+    }
+    
+    func showAbout() {
+        if aboutWindow == nil || aboutWindow?.isVisible == false {
+            let aboutView = AboutView()
+            let hostingView = NSHostingView(rootView: aboutView)
+            
+            aboutWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            
+            aboutWindow?.title = "About On My Radar"
+            aboutWindow?.contentView = hostingView
+            aboutWindow?.center()
+            aboutWindow?.isReleasedWhenClosed = false
+        }
+        
+        aboutWindow?.makeKeyAndOrderFront(nil)
+        aboutWindow?.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
@@ -205,6 +281,9 @@ class MenuBarController: NSObject {
     private var floatingPanel: FloatingPanelController?
     private let modelContainer: ModelContainer
     private let hotkeyManager = GlobalHotkeyManager()
+    private var activeIcon: NSImage?
+    private var inactiveIcon: NSImage?
+    private var pendingTaskCount: Int = 0
     
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -216,12 +295,68 @@ class MenuBarController: NSObject {
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
+        // Create both active and inactive icons
+        activeIcon = createRadarIcon(alpha: 1.0)
+        inactiveIcon = createRadarIcon(alpha: 0.4)
+        
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "OnMyRadar")
+            // Start with inactive icon
+            button.image = inactiveIcon ?? NSImage(systemSymbolName: "target", accessibilityDescription: "OnMyRadar")
             button.action = #selector(togglePanel)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            
+            // Initial task count update
+            updateTaskCount()
         }
+        
+        // Listen for panel state changes
+        NotificationCenter.default.addObserver(self, selector: #selector(panelDidBecomeActive), name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(panelDidBecomeInactive), name: NSNotification.Name("PanelDidBecomeInactive"), object: nil)
+        
+        // Auto-open panel on app launch
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+        }
+    }
+    
+    private func createRadarIcon(alpha: CGFloat = 1.0) -> NSImage? {
+        let image = NSImage(size: NSSize(width: 18, height: 18))
+        image.lockFocus()
+        
+        // Draw radar circles
+        let center = NSPoint(x: 9, y: 9)
+        let context = NSGraphicsContext.current?.cgContext
+        
+        // Set color for menu bar (adapts to dark/light mode)
+        if let context = context {
+            context.setStrokeColor(NSColor.labelColor.withAlphaComponent(alpha).cgColor)
+            
+            // Draw concentric circles
+            for i in 1...3 {
+                let radius = CGFloat(i) * 2.5
+                context.strokeEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, 
+                                                width: radius * 2, height: radius * 2))
+            }
+            
+            // Draw radar line at 0 degrees (pointing right)
+            context.setLineWidth(1.5)
+            context.move(to: CGPoint(x: center.x, y: center.y))
+            context.addLine(to: CGPoint(x: center.x + 7, y: center.y))
+            context.strokePath()
+            
+            // Draw sweep gradient effect (trailing behind the line)
+            context.setAlpha(0.3)
+            context.move(to: CGPoint(x: center.x, y: center.y))
+            context.addLine(to: CGPoint(x: center.x + 7, y: center.y))
+            context.addLine(to: CGPoint(x: center.x + 5, y: center.y + 5))
+            context.closePath()
+            context.fillPath()
+        }
+        
+        image.unlockFocus()
+        image.isTemplate = true // Makes it adapt to menu bar appearance
+        return image
     }
     
     @objc private func togglePanel(_ sender: NSStatusBarButton) {
@@ -232,6 +367,7 @@ class MenuBarController: NSObject {
         } else {
             if floatingPanel == nil {
                 floatingPanel = FloatingPanelController(modelContainer: modelContainer)
+                floatingPanel?.menuBarController = self
             }
             floatingPanel?.toggle()
         }
@@ -243,6 +379,16 @@ class MenuBarController: NSObject {
         let settingsItem = NSMenuItem(title: "Settings", action: #selector(showSettings), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
+        
+        let clearAllItem = NSMenuItem(title: "Clear All Tasks", action: #selector(clearAllTasks), keyEquivalent: "")
+        clearAllItem.target = self
+        menu.addItem(clearAllItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        let aboutItem = NSMenuItem(title: "About On My Radar", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -262,8 +408,120 @@ class MenuBarController: NSObject {
         floatingPanel?.showSettings()
     }
     
+    @objc private func clearAllTasks() {
+        let alert = NSAlert()
+        alert.messageText = "Clear All Tasks?"
+        alert.informativeText = "This will permanently delete all tasks. This action cannot be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Clear All")
+        alert.addButton(withTitle: "Cancel")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            // Clear all tasks
+            Task { @MainActor in
+                let context = modelContainer.mainContext
+                let request = FetchDescriptor<Item>()
+                
+                do {
+                    let items = try context.fetch(request)
+                    for item in items {
+                        context.delete(item)
+                    }
+                    try context.save()
+                } catch {
+                    NSAlert.showError("Failed to clear tasks: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    @objc private func showAbout() {
+        if floatingPanel == nil {
+            floatingPanel = FloatingPanelController(modelContainer: modelContainer)
+        }
+        floatingPanel?.showAbout()
+    }
+    
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+    
+    @objc private func panelDidBecomeActive() {
+        updateStatusItemImage(active: true)
+    }
+    
+    @objc private func panelDidBecomeInactive() {
+        updateStatusItemImage(active: false)
+    }
+    
+    func updateTaskCount(_ count: Int = -1) {
+        if count >= 0 {
+            pendingTaskCount = count
+        }
+        
+        // Update the status item image with or without badge
+        let isActive = floatingPanel?.isPanelKeyWindow ?? false
+        updateStatusItemImage(active: isActive)
+    }
+    
+    private func updateStatusItemImage(active: Bool) {
+        guard let button = statusItem?.button else { return }
+        
+        let baseIcon = active ? activeIcon : inactiveIcon
+        let alpha = active ? 1.0 : 0.4
+        
+        if pendingTaskCount > 0 {
+            // Create image with badge
+            if let iconWithBadge = createIconWithBadge(baseIcon: baseIcon, count: pendingTaskCount, alpha: alpha) {
+                button.image = iconWithBadge
+            } else {
+                button.image = baseIcon
+            }
+        } else {
+            button.image = baseIcon
+        }
+    }
+    
+    private func createIconWithBadge(baseIcon: NSImage?, count: Int, alpha: CGFloat) -> NSImage? {
+        guard let baseIcon = baseIcon else { return nil }
+        
+        let imageSize = baseIcon.size
+        let badgeSize: CGFloat = 8
+        let image = NSImage(size: imageSize)
+        
+        image.lockFocus()
+        
+        // Draw the base icon
+        baseIcon.draw(at: .zero, from: NSRect(origin: .zero, size: imageSize), operation: .sourceOver, fraction: 1.0)
+        
+        // Draw the badge at bottom right
+        let badgeRect = NSRect(x: imageSize.width - badgeSize - 1, y: 1, width: badgeSize, height: badgeSize)
+        
+        // Badge background - monochrome style with alpha
+        NSColor.labelColor.withAlphaComponent(alpha).setFill()
+        let badgePath = NSBezierPath(ovalIn: badgeRect)
+        badgePath.fill()
+        
+        // Badge text
+        let countString = count > 9 ? "9+" : "\(count)"
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 5, weight: .bold),
+            .foregroundColor: NSColor.controlBackgroundColor.withAlphaComponent(alpha)
+        ]
+        
+        let textSize = countString.size(withAttributes: attributes)
+        let textRect = NSRect(
+            x: badgeRect.midX - textSize.width / 2,
+            y: badgeRect.midY - textSize.height / 2,
+            width: textSize.width,
+            height: textSize.height
+        )
+        
+        countString.draw(in: textRect, withAttributes: attributes)
+        
+        image.unlockFocus()
+        
+        return image
     }
     
     private func setupGlobalHotkey() {
