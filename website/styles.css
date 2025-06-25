@@ -342,6 +342,16 @@ footer {
     color: var(--text-secondary);
 }
 
+.footer-brand a {
+    color: var(--primary-green);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-brand a:hover {
+    color: var(--dark-green);
+}
+
 .footer-links {
     display: flex;
     gap: 32px;
