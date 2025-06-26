@@ -17,6 +17,8 @@ struct MenuBarView: View {
     @State private var shouldRotateRadar = false
     @State private var editingTaskId: PersistentIdentifier? = nil
     @State private var recentlyReorderedId: PersistentIdentifier? = nil
+    @State private var isEditMode = false
+    @State private var isPanelActive = true
     var onTaskCountChanged: ((Int) -> Void)?
     
     private var settings: Settings? {
@@ -29,6 +31,7 @@ struct MenuBarView: View {
             mainContent
         }
         .background(Color.black.opacity(0.85))
+        .preferredColorScheme(.dark)
         .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         .overlay(borderOverlay)
         .overlay(resizeHandleOverlay, alignment: .bottomTrailing)
@@ -42,6 +45,13 @@ struct MenuBarView: View {
         .onChange(of: items.map { $0.status }) { _, _ in
             updateTaskCount()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PanelDidBecomeActive"))) { _ in
+            isPanelActive = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PanelDidBecomeInactive"))) { _ in
+            isPanelActive = false
+            isEditMode = false
+        }
     }
     
     private var radarBackground: some View {
@@ -53,6 +63,11 @@ struct MenuBarView: View {
         VStack(spacing: 0) {
             dragArea
             taskList
+            if isPanelActive {
+                Divider()
+                    .opacity(0.5)
+                toolbar
+            }
             Divider()
                 .opacity(0.5)
             newTaskInput
@@ -93,6 +108,7 @@ struct MenuBarView: View {
         TaskRow(
             item: item,
             settings: settings,
+            isEditMode: isEditMode,
             onEditingChanged: { isEditing in
                 if isEditing {
                     editingTaskId = item.id
@@ -131,6 +147,50 @@ struct MenuBarView: View {
             .foregroundColor(Color.black.opacity(0.2))
             .rotationEffect(.degrees(45))
             .padding(4)
+    }
+    
+    private var toolbar: some View {
+        HStack(spacing: 12) {
+            // Edit/Done button
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isEditMode.toggle()
+                }
+            }) {
+                Text(isEditMode ? "Done" : "Edit")
+                    .font(.system(size: 11))
+                    .foregroundColor(items.isEmpty ? Color.secondary.opacity(0.5) : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(items.isEmpty)
+            
+            Spacer()
+            
+            // Clear Tasks button
+            Button(action: {
+                // Post notification to clear tasks
+                NotificationCenter.default.post(name: NSNotification.Name("ClearAllTasks"), object: nil)
+            }) {
+                Text("Clear Tasks")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color.secondary)
+            }
+            .buttonStyle(.plain)
+            
+            // Settings button
+            Button(action: {
+                // Post notification to show settings
+                NotificationCenter.default.post(name: NSNotification.Name("ShowSettingsWindow"), object: nil)
+            }) {
+                Text("Settings")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.05))
     }
     
     private func addItem() {
@@ -189,17 +249,14 @@ struct MenuBarView: View {
 struct TaskRow: View {
     let item: Item
     let settings: Settings?
+    let isEditMode: Bool
     var onEditingChanged: ((Bool) -> Void)?
     var editingTaskId: PersistentIdentifier?
     @Binding var recentlyReorderedId: PersistentIdentifier?
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Item.order) private var allItems: [Item]
-    @State private var isHovered = false
-    @State private var showDelete = false
-    @State private var showReorderButtons = false
     @State private var isEditing = false
     @State private var editingText = ""
-    @State private var keepControlsTimer: Timer?
     @FocusState private var isTextFieldFocused: Bool
     
     private var statusDisplay: String {
@@ -227,8 +284,8 @@ struct TaskRow: View {
     
     var body: some View {
         HStack(spacing: 10) {
-            // Reorder Buttons - show on hover with delay (but not when editing)
-            if !isEditing && (isHovered || recentlyReorderedId == item.id) && showReorderButtons {
+            // Reorder Buttons - show in edit mode (but not when editing)
+            if !isEditing && isEditMode {
                 VStack(spacing: 2) {
                     Button(action: moveItemUp) {
                         Image(systemName: "chevron.up")
@@ -302,8 +359,8 @@ struct TaskRow: View {
                     }
             }
             
-            // Delete Button - show for completed tasks or on hover with delay (but not when editing)
-            if !isEditing && (item.status == .done || ((isHovered || recentlyReorderedId == item.id) && showDelete)) {
+            // Delete Button - show for completed tasks or in edit mode (but not when editing)
+            if !isEditing && (item.status == .done || isEditMode) {
                 Button(action: deleteItem) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary.opacity(0.25))
@@ -315,50 +372,17 @@ struct TaskRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.white.opacity(isHovered ? 0.15 : 0.08))
+        .background(Color.white.opacity(0.08))
         .contentShape(Rectangle())
         .onTapGesture {
             if isEditing {
                 saveEdit()
             }
         }
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHovered = hovering
-                if hovering {
-                    // Show delete button and reorder buttons after 1 second delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        if isHovered || keepControlsTimer != nil {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                if item.status != .done {
-                                    showDelete = true
-                                }
-                                showReorderButtons = true
-                            }
-                        }
-                    }
-                } else if !hovering {
-                    // Only hide controls if we're not in the keep-alive period
-                    if keepControlsTimer == nil {
-                        showDelete = false
-                        showReorderButtons = false
-                    }
-                }
-            }
-        }
         .onChange(of: editingTaskId) { _, newValue in
             // If another task started editing, save this one
             if isEditing && newValue != item.id {
                 saveEdit()
-            }
-        }
-        .onChange(of: recentlyReorderedId) { _, newValue in
-            // If this item was just reordered, show controls immediately
-            if newValue == item.id && !showReorderButtons {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showDelete = item.status == .done
-                    showReorderButtons = true
-                }
             }
         }
     }
@@ -426,7 +450,6 @@ struct TaskRow: View {
         
         do {
             try modelContext.save()
-            keepControlsVisible()
         } catch {
             print("Error moving item up: \(error)")
         }
@@ -445,39 +468,11 @@ struct TaskRow: View {
         
         do {
             try modelContext.save()
-            keepControlsVisible()
         } catch {
             print("Error moving item down: \(error)")
         }
     }
     
-    private func keepControlsVisible() {
-        // Cancel any existing timer
-        keepControlsTimer?.invalidate()
-        
-        // Mark this item as recently reordered
-        recentlyReorderedId = item.id
-        
-        // Keep controls visible
-        showDelete = item.status == .done
-        showReorderButtons = true
-        
-        // Set timer to hide controls after 1 second
-        keepControlsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
-            // Only hide if not currently hovered
-            if !isHovered {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showDelete = false
-                    showReorderButtons = false
-                    // Clear the recently reordered flag
-                    if recentlyReorderedId == item.id {
-                        recentlyReorderedId = nil
-                    }
-                }
-            }
-            keepControlsTimer = nil
-        }
-    }
     
     private func startEditing() {
         editingText = item.title
