@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 final class Settings {
-    var todoSymbol: String = "+"
+    var todoSymbol: String = "-"
     var todoLabel: String = "on me"
     var waitingSymbol: String = "."
     var waitingLabel: String = "waiting"

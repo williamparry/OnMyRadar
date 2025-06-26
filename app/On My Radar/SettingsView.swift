@@ -20,7 +20,7 @@ struct SettingsView: View {
     
     // Local state for editing
     @State private var useSymbols = false
-    @State private var todoSymbol = "+"
+    @State private var todoSymbol = "-"
     @State private var todoLabel = "on me"
     @State private var waitingSymbol = "."
     @State private var waitingLabel = "waiting"
@@ -29,7 +29,8 @@ struct SettingsView: View {
     @State private var inactivePanelOpacity = 0.9
     
     
-    var onSave: (() -> Void)?
+    // Timer for debouncing saves
+    @State private var saveTimer: Timer?
     
     private var settings: Settings? {
         settingsArray.first
@@ -58,18 +59,36 @@ struct SettingsView: View {
                         }
                     
                     Toggle("Use symbols instead of text labels", isOn: $useSymbols)
+                        .onChange(of: useSymbols) { _, _ in
+                            autoSave()
+                        }
                     
                     HStack {
                         Text("Global shortcut:")
                         Spacer()
                         ShortcutRecorderView(keyCode: $globalHotkeyKeyCode, modifiers: $globalHotkeyModifiers)
                             .frame(width: 150, height: 22)
+                            .onChange(of: globalHotkeyKeyCode) { _, _ in
+                                autoSave()
+                            }
+                            .onChange(of: globalHotkeyModifiers) { _, _ in
+                                autoSave()
+                            }
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Inactive panel transparency:")
                         HStack {
                             Slider(value: $inactivePanelOpacity, in: 0.1...1.0, step: 0.1)
+                                .onChange(of: inactivePanelOpacity) { _, newValue in
+                                    autoSave()
+                                    // Post notification to update panel opacity immediately
+                                    NotificationCenter.default.post(
+                                        name: NSNotification.Name("UpdatePanelOpacity"), 
+                                        object: nil,
+                                        userInfo: ["opacity": newValue]
+                                    )
+                                }
                             Text("\(Int(inactivePanelOpacity * 100))%")
                                 .frame(width: 40, alignment: .trailing)
                                 .monospacedDigit()
@@ -85,19 +104,22 @@ struct SettingsView: View {
                         StatusRow(
                             title: "To Do:",
                             symbol: $todoSymbol,
-                            label: $todoLabel
+                            label: $todoLabel,
+                            onChanged: autoSave
                         )
                         
                         StatusRow(
                             title: "Waiting:",
                             symbol: $waitingSymbol,
-                            label: $waitingLabel
+                            label: $waitingLabel,
+                            onChanged: autoSave
                         )
                         
                         StatusRow(
                             title: "Done:",
                             symbol: $doneSymbol,
-                            label: $doneLabel
+                            label: $doneLabel,
+                            onChanged: autoSave
                         )
                     }
                     .padding(.vertical, 4)
@@ -108,10 +130,12 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .scrollDisabled(true)
             
-            // Buttons outside of form sections
+            // Reset button
             HStack {
+                Spacer()
+                
                 Button("Reset to Defaults") {
-                    todoSymbol = "+"
+                    todoSymbol = "-"
                     todoLabel = "on me"
                     waitingSymbol = "."
                     waitingLabel = "waiting"
@@ -122,19 +146,22 @@ struct SettingsView: View {
                     
                     // Reset panel position
                     NotificationCenter.default.post(name: NSNotification.Name("ResetPanelPosition"), object: nil)
+                    
+                    // Auto-save the reset values
+                    autoSave()
                 }
                 
                 Spacer()
-                
-                Button("Save") {
-                    saveSettings()
-                }
-                .keyboardShortcut(.return, modifiers: [])
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
         .frame(width: 400, height: 450)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Unfocus any active text field when clicking outside
+            NSApp.keyWindow?.makeFirstResponder(nil)
+        }
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
             loadSettings()
@@ -152,6 +179,16 @@ struct SettingsView: View {
             doneSymbol = settings.doneSymbol
             doneLabel = settings.doneLabel
             inactivePanelOpacity = settings.inactivePanelOpacity
+        }
+    }
+    
+    private func autoSave() {
+        // Cancel any existing timer
+        saveTimer?.invalidate()
+        
+        // Create a new timer to save after a short delay
+        saveTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+            saveSettings()
         }
     }
     
@@ -176,7 +213,6 @@ struct SettingsView: View {
         do {
             try modelContext.save()
             saveHotkeySettings()
-            onSave?()
         } catch {
             print("Error saving settings: \(error)")
         }
@@ -212,6 +248,10 @@ struct StatusRow: View {
     let title: String
     @Binding var symbol: String
     @Binding var label: String
+    let onChanged: () -> Void
+    
+    @FocusState private var symbolFieldFocused: Bool
+    @FocusState private var labelFieldFocused: Bool
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -227,10 +267,15 @@ struct StatusRow: View {
                     .frame(width: 40)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.center)
+                    .focused($symbolFieldFocused)
+                    .onSubmit {
+                        symbolFieldFocused = false
+                    }
                     .onChange(of: symbol) { _, newValue in
                         if newValue.count > 1 {
                             symbol = String(newValue.prefix(1))
                         }
+                        onChanged()
                     }
             }
             
@@ -243,10 +288,15 @@ struct StatusRow: View {
                     .frame(width: 100)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.center)
+                    .focused($labelFieldFocused)
+                    .onSubmit {
+                        labelFieldFocused = false
+                    }
                     .onChange(of: label) { _, newValue in
                         if newValue.count > 7 {
                             label = String(newValue.prefix(7))
                         }
+                        onChanged()
                     }
             }
             

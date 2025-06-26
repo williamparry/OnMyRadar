@@ -155,6 +155,9 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         
         // Listen for clear all tasks request
         NotificationCenter.default.addObserver(self, selector: #selector(clearAllTasks), name: NSNotification.Name("ClearAllTasks"), object: nil)
+        
+        // Listen for opacity updates
+        NotificationCenter.default.addObserver(self, selector: #selector(updatePanelOpacity(_:)), name: NSNotification.Name("UpdatePanelOpacity"), object: nil)
     }
     
     func toggle() {
@@ -216,10 +219,8 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     
     @objc func showSettings() {
         if settingsWindow == nil || settingsWindow?.isVisible == false {
-            let settingsView = SettingsView(onSave: { [weak self] in
-                self?.settingsWindow?.close()
-            })
-            .modelContainer(modelContainer)
+            let settingsView = SettingsView()
+                .modelContainer(modelContainer)
             
             let hostingView = NSHostingView(rootView: settingsView)
             
@@ -304,6 +305,14 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
                 }
             }
         }
+    }
+    
+    @objc private func updatePanelOpacity(_ notification: Notification) {
+        guard let opacity = notification.userInfo?["opacity"] as? Double,
+              let panel = panel,
+              !panel.isKeyWindow else { return }
+        
+        panel.alphaValue = opacity
     }
 }
 

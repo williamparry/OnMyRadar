@@ -163,9 +163,10 @@ struct MenuBarView: View {
             }) {
                 Text("Clear Tasks")
                     .font(.system(size: 11))
-                    .foregroundColor(Color.secondary)
+                    .foregroundColor(items.isEmpty ? Color.secondary.opacity(0.5) : Color.secondary)
             }
             .buttonStyle(.plain)
+            .disabled(items.isEmpty)
             
             // Settings button
             Button(action: {
