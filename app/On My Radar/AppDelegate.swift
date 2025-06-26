@@ -158,6 +158,9 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         
         // Listen for opacity updates
         NotificationCenter.default.addObserver(self, selector: #selector(updatePanelOpacity(_:)), name: NSNotification.Name("UpdatePanelOpacity"), object: nil)
+        
+        // Listen for about window request
+        NotificationCenter.default.addObserver(self, selector: #selector(showAbout), name: NSNotification.Name("ShowAboutWindow"), object: nil)
     }
     
     func toggle() {
@@ -257,7 +260,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         }
     }
     
-    func showAbout() {
+    @objc func showAbout() {
         if aboutWindow == nil || aboutWindow?.isVisible == false {
             let aboutView = AboutView()
             let hostingView = NSHostingView(rootView: aboutView)

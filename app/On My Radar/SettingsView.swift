@@ -130,10 +130,8 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .scrollDisabled(true)
             
-            // Reset button
-            HStack {
-                Spacer()
-                
+            // Bottom buttons
+            HStack(spacing: 12) {
                 Button("Reset to Defaults") {
                     todoSymbol = "-"
                     todoLabel = "on me"
@@ -150,6 +148,16 @@ struct SettingsView: View {
                     // Auto-save the reset values
                     autoSave()
                 }
+                
+                Button("About") {
+                    // Post notification to show about window
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowAboutWindow"), object: nil)
+                }
+                
+                Button("Quit") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .foregroundColor(.red)
                 
                 Spacer()
             }
