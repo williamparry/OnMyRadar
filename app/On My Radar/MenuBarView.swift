@@ -16,10 +16,8 @@ struct MenuBarView: View {
     @FocusState private var isInputFocused: Bool
     @State private var shouldRotateRadar = false
     @State private var editingTaskId: PersistentIdentifier? = nil
-    @State private var recentlyReorderedId: PersistentIdentifier? = nil
     @State private var isEditMode = false
     @State private var isPanelActive = true
-    var onTaskCountChanged: ((Int) -> Void)?
     
     private var settings: Settings? {
         settingsArray.first
@@ -37,13 +35,6 @@ struct MenuBarView: View {
         .overlay(resizeHandleOverlay, alignment: .bottomTrailing)
         .onAppear {
             ensureSettings()
-            updateTaskCount()
-        }
-        .onChange(of: items.count) { _, _ in
-            updateTaskCount()
-        }
-        .onChange(of: items.map { $0.status }) { _, _ in
-            updateTaskCount()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PanelDidBecomeActive"))) { _ in
             isPanelActive = true
@@ -116,8 +107,7 @@ struct MenuBarView: View {
                     editingTaskId = nil
                 }
             },
-            editingTaskId: editingTaskId,
-            recentlyReorderedId: $recentlyReorderedId
+            editingTaskId: editingTaskId
         )
     }
     
@@ -215,10 +205,6 @@ struct MenuBarView: View {
         }
     }
     
-    private func updateTaskCount() {
-        let pendingCount = items.filter { $0.status != .done }.count
-        onTaskCountChanged?(pendingCount)
-    }
     
     private func ensureSettings() {
         if settingsArray.isEmpty {
@@ -252,7 +238,6 @@ struct TaskRow: View {
     let isEditMode: Bool
     var onEditingChanged: ((Bool) -> Void)?
     var editingTaskId: PersistentIdentifier?
-    @Binding var recentlyReorderedId: PersistentIdentifier?
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Item.order) private var allItems: [Item]
     @State private var isEditing = false

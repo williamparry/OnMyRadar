@@ -39,11 +39,4 @@ extension Settings {
         }
     }
     
-    func getSymbol(for status: TaskStatus) -> String {
-        switch status {
-        case .todo: return todoSymbol
-        case .waiting: return waitingSymbol
-        case .done: return doneSymbol
-        }
-    }
 }

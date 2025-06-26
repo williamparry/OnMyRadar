@@ -17,7 +17,7 @@ class GlobalHotkeyManager {
     private var onHotkey: (() -> Void)?
     
     init() {
-        setupEventHandler()
+        // Event handler will be set up on first hotkey registration
     }
     
     deinit {
@@ -107,9 +107,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     }
     
     private func setupPanel() {
-        let contentView = NSHostingView(rootView: MenuBarView(onTaskCountChanged: { [weak self] count in
-            self?.menuBarController?.updateTaskCount(count)
-        })
+        let contentView = NSHostingView(rootView: MenuBarView()
             .modelContainer(modelContainer))
         
         // Get saved frame or use default
@@ -153,10 +151,10 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         panel?.setFrameAutosaveName("OnMyRadarPanel")
         
         // Listen for settings window request
-        NotificationCenter.default.addObserver(self, selector: #selector(showSettingsFromNotification), name: NSNotification.Name("ShowSettingsWindow"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(showSettings), name: NSNotification.Name("ShowSettingsWindow"), object: nil)
         
         // Listen for clear all tasks request
-        NotificationCenter.default.addObserver(self, selector: #selector(clearAllTasksFromNotification), name: NSNotification.Name("ClearAllTasks"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(clearAllTasks), name: NSNotification.Name("ClearAllTasks"), object: nil)
     }
     
     func toggle() {
@@ -216,15 +214,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeInactive"), object: nil)
     }
     
-    @objc private func showSettingsFromNotification() {
-        showSettings()
-    }
-    
-    @objc private func clearAllTasksFromNotification() {
-        clearAllTasks()
-    }
-    
-    func showSettings() {
+    @objc func showSettings() {
         if settingsWindow == nil || settingsWindow?.isVisible == false {
             let settingsView = SettingsView(onSave: { [weak self] in
                 self?.settingsWindow?.close()
@@ -289,7 +279,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     
-    func clearAllTasks() {
+    @objc func clearAllTasks() {
         let alert = NSAlert()
         alert.messageText = "Clear All Tasks?"
         alert.informativeText = "This will permanently delete all tasks. This action cannot be undone."
@@ -345,9 +335,6 @@ class MenuBarController: NSObject {
             button.action = #selector(togglePanel)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            
-            // Initial task count update
-            updateTaskCount()
         }
         
         // Listen for panel state changes
@@ -495,9 +482,6 @@ class MenuBarController: NSObject {
         updateStatusItemImage(active: false)
     }
     
-    func updateTaskCount(_ count: Int = -1) {
-        // Badge functionality removed - no longer needed
-    }
     
     private func updateStatusItemImage(active: Bool) {
         guard let button = statusItem?.button else { return }
