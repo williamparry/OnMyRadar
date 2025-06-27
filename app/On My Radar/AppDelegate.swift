@@ -504,19 +504,15 @@ class MenuBarController: NSObject {
     
     
     private func setupGlobalHotkey() {
-        // Default: Cmd+Shift+T
-        let defaultKeyCode: UInt32 = 0x11 // T key
-        let defaultModifiers: UInt32 = UInt32(cmdKey | shiftKey)
-        
         // Load saved hotkey from UserDefaults
         let keyCode = UInt32(UserDefaults.standard.integer(forKey: "globalHotkeyKeyCode"))
         let modifiers = UInt32(UserDefaults.standard.integer(forKey: "globalHotkeyModifiers"))
         
-        let actualKeyCode = keyCode > 0 ? keyCode : defaultKeyCode
-        let actualModifiers = modifiers > 0 ? modifiers : defaultModifiers
-        
-        hotkeyManager.registerHotkey(keyCode: actualKeyCode, modifiers: actualModifiers) { [weak self] in
-            self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+        // Only register if user has explicitly set a hotkey
+        if keyCode > 0 && modifiers > 0 {
+            hotkeyManager.registerHotkey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+                self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+            }
         }
     }
     
@@ -524,8 +520,13 @@ class MenuBarController: NSObject {
         UserDefaults.standard.set(Int(keyCode), forKey: "globalHotkeyKeyCode")
         UserDefaults.standard.set(Int(modifiers), forKey: "globalHotkeyModifiers")
         
-        hotkeyManager.registerHotkey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
-            self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+        if keyCode > 0 && modifiers > 0 {
+            hotkeyManager.registerHotkey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+                self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+            }
+        } else {
+            // Clear the hotkey
+            hotkeyManager.unregisterHotkey()
         }
     }
 }

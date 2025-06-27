@@ -67,7 +67,7 @@ struct SettingsView: View {
                         Text("Global shortcut:")
                         Spacer()
                         ShortcutRecorderView(keyCode: $globalHotkeyKeyCode, modifiers: $globalHotkeyModifiers)
-                            .frame(width: 150, height: 22)
+                            .frame(width: 200, height: 22)
                             .onChange(of: globalHotkeyKeyCode) { _, _ in
                                 autoSave()
                             }
@@ -141,6 +141,10 @@ struct SettingsView: View {
                     doneLabel = "done"
                     useSymbols = false
                     inactivePanelOpacity = 0.9
+                    
+                    // Clear keybinding
+                    globalHotkeyKeyCode = 0
+                    globalHotkeyModifiers = 0
                     
                     // Reset panel position
                     NotificationCenter.default.post(name: NSNotification.Name("ResetPanelPosition"), object: nil)
@@ -233,11 +237,8 @@ struct SettingsView: View {
         if keyCode > 0 {
             globalHotkeyKeyCode = UInt32(keyCode)
             globalHotkeyModifiers = UInt32(modifiers)
-        } else {
-            // Default: Cmd+Shift+T
-            globalHotkeyKeyCode = 0x11 // T key
-            globalHotkeyModifiers = UInt32(cmdKey | shiftKey)
         }
+        // No default hotkey - user must explicitly set one
     }
     
     private func saveHotkeySettings() {

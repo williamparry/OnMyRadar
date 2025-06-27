@@ -137,7 +137,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
             guard let textField = sender.view as? NSTextField else { return }
             self.textField = textField
             
-            textField.stringValue = "Type shortcut..."
+            textField.stringValue = "Type shortcut or ESC to clear"
             textField.textColor = .systemBlue
             
             // Start monitoring key events
@@ -148,6 +148,24 @@ struct ShortcutRecorderView: NSViewRepresentable {
         }
         
         private func handleKeyEvent(_ event: NSEvent) {
+            // Check for escape key to clear
+            if event.keyCode == 0x35 { // Escape key
+                // Clear the shortcut
+                parent.keyCode = 0
+                parent.modifiers = 0
+                
+                // Stop monitoring
+                if let monitor = eventMonitor {
+                    NSEvent.removeMonitor(monitor)
+                    eventMonitor = nil
+                }
+                
+                // Reset text field appearance
+                textField?.textColor = .labelColor
+                parent.updateTextField(textField!)
+                return
+            }
+            
             // Get modifiers
             let modifierFlags = event.modifierFlags
             var modifiers: UInt32 = 0
