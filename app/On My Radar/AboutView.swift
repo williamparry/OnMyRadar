@@ -37,6 +37,10 @@ struct AboutView: View {
             }
             .padding(.horizontal, 40)
             
+            Link("onmyradar.williamparry.com", destination: URL(string: "https://onmyradar.williamparry.com")!)
+                .font(.footnote)
+                .foregroundColor(.accentColor)
+            
             Spacer()
         }
         .padding(30)
