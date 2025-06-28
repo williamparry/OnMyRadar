@@ -49,6 +49,22 @@ body {
     align-items: center;
 }
 
+.github-link {
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.github-link:hover {
+    color: var(--primary-green);
+}
+
+.github-link svg {
+    width: 24px;
+    height: 24px;
+}
+
 .logo {
     display: flex;
     align-items: center;
