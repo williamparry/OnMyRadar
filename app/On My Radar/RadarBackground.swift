@@ -89,10 +89,3 @@ struct RadarBackground: View {
     }
 }
 
-struct RadarBackground_Previews: PreviewProvider {
-    static var previews: some View {
-        RadarBackground(shouldRotate: false)
-            .frame(width: 400, height: 600)
-            .background(Color.black)
-    }
-}

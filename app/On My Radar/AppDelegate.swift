@@ -24,18 +24,6 @@ class GlobalHotkeyManager {
         unregisterHotkey()
     }
     
-    private func setupEventHandler() {
-        if GlobalHotkeyManager.eventHandler == nil {
-            var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-            let handler: EventHandlerUPP = { _, _, userData in
-                let manager = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData!).takeUnretainedValue()
-                manager.onHotkey?()
-                return noErr
-            }
-            
-            InstallEventHandler(GetApplicationEventTarget(), handler, 1, &eventType, nil, &GlobalHotkeyManager.eventHandler)
-        }
-    }
     
     func registerHotkey(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
         unregisterHotkey()
@@ -92,10 +80,6 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     weak var menuBarController: MenuBarController?
     
     private let windowFrameKey = "OnMyRadarWindowFrame"
-    
-    var isPanelKeyWindow: Bool {
-        return panel?.isKeyWindow ?? false
-    }
     
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -178,25 +162,22 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         }
     }
     
-    func windowWillClose(_ notification: Notification) {
-        // Save window frame when closing
+    private func saveWindowFrame() {
         if let frame = panel?.frame {
             UserDefaults.standard.set(NSStringFromRect(frame), forKey: windowFrameKey)
         }
+    }
+    
+    func windowWillClose(_ notification: Notification) {
+        saveWindowFrame()
     }
     
     func windowDidResize(_ notification: Notification) {
-        // Save window frame when resizing
-        if let frame = panel?.frame {
-            UserDefaults.standard.set(NSStringFromRect(frame), forKey: windowFrameKey)
-        }
+        saveWindowFrame()
     }
     
     func windowDidMove(_ notification: Notification) {
-        // Save window frame when moving
-        if let frame = panel?.frame {
-            UserDefaults.standard.set(NSStringFromRect(frame), forKey: windowFrameKey)
-        }
+        saveWindowFrame()
     }
     
     func windowDidBecomeKey(_ notification: Notification) {
@@ -284,30 +265,8 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     }
     
     @objc func clearAllTasks() {
-        let alert = NSAlert()
-        alert.messageText = "Clear All Tasks?"
-        alert.informativeText = "This will permanently delete all tasks. This action cannot be undone."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Clear All")
-        alert.addButton(withTitle: "Cancel")
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            // Clear all tasks
-            Task { @MainActor in
-                let context = modelContainer.mainContext
-                let request = FetchDescriptor<Item>()
-                
-                do {
-                    let items = try context.fetch(request)
-                    for item in items {
-                        context.delete(item)
-                    }
-                    try context.save()
-                } catch {
-                    print("Error clearing tasks: \(error)")
-                }
-            }
-        }
+        // Use the menu bar controller's implementation
+        menuBarController?.clearAllTasks()
     }
     
     @objc private func updatePanelOpacity(_ notification: Notification) {
@@ -405,10 +364,7 @@ class MenuBarController: NSObject {
         if event.type == .rightMouseUp {
             showContextMenu()
         } else {
-            if floatingPanel == nil {
-                floatingPanel = FloatingPanelController(modelContainer: modelContainer)
-                floatingPanel?.menuBarController = self
-            }
+            ensureFloatingPanel()
             floatingPanel?.toggle()
         }
     }
@@ -442,13 +398,19 @@ class MenuBarController: NSObject {
     }
     
     @objc private func showSettings() {
-        if floatingPanel == nil {
-            floatingPanel = FloatingPanelController(modelContainer: modelContainer)
-        }
+        // Use existing floating panel or create one
+        ensureFloatingPanel()
         floatingPanel?.showSettings()
     }
     
-    @objc private func clearAllTasks() {
+    private func ensureFloatingPanel() {
+        if floatingPanel == nil {
+            floatingPanel = FloatingPanelController(modelContainer: modelContainer)
+            floatingPanel?.menuBarController = self
+        }
+    }
+    
+    @objc func clearAllTasks() {
         let alert = NSAlert()
         alert.messageText = "Clear All Tasks?"
         alert.informativeText = "This will permanently delete all tasks. This action cannot be undone."
@@ -476,9 +438,7 @@ class MenuBarController: NSObject {
     }
     
     @objc private func showAbout() {
-        if floatingPanel == nil {
-            floatingPanel = FloatingPanelController(modelContainer: modelContainer)
-        }
+        ensureFloatingPanel()
         floatingPanel?.showAbout()
     }
     
