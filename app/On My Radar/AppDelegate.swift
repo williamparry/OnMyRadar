@@ -1,10 +1,3 @@
-//
-//  AppDelegate.swift
-//  OnMyRadar
-//
-//  Created by William Parry on 24/6/2025.
-//
-
 import Cocoa
 import SwiftUI
 import SwiftData
@@ -17,26 +10,23 @@ class GlobalHotkeyManager {
     private var onHotkey: (() -> Void)?
     
     init() {
-        // Event handler will be set up on first hotkey registration
     }
     
     deinit {
         unregisterHotkey()
     }
     
-    
     func registerHotkey(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
         unregisterHotkey()
         self.onHotkey = action
         
-        let hotkeyID = EventHotKeyID(signature: OSType(0x5749544F), id: 1) // "OMR" for OnMyRadar
+        let hotkeyID = EventHotKeyID(signature: OSType(0x5749544F), id: 1)
         var eventHotKey: EventHotKeyRef?
         let userData = Unmanaged.passUnretained(self).toOpaque()
         
         RegisterEventHotKey(keyCode, modifiers, hotkeyID, GetApplicationEventTarget(), 0, &eventHotKey)
         self.eventHotKey = eventHotKey
         
-        // Update event handler with userData
         if let handler = GlobalHotkeyManager.eventHandler {
             RemoveEventHandler(handler)
             GlobalHotkeyManager.eventHandler = nil
@@ -61,13 +51,16 @@ class GlobalHotkeyManager {
     }
 }
 
-// Custom panel that can become key window even when borderless
 class BorderlessPanel: NSPanel {
     override var canBecomeKey: Bool {
         return true
     }
     
     override var canBecomeMain: Bool {
+        return true
+    }
+    
+    override var acceptsFirstResponder: Bool {
         return true
     }
 }
@@ -86,7 +79,6 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         super.init()
         setupPanel()
         
-        // Listen for reset panel position notification
         NotificationCenter.default.addObserver(self, selector: #selector(resetPanelPosition), name: NSNotification.Name("ResetPanelPosition"), object: nil)
     }
     
@@ -94,7 +86,6 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         let contentView = NSHostingView(rootView: MenuBarView()
             .modelContainer(modelContainer))
         
-        // Get saved frame or use default
         let defaultRect = NSRect(x: 0, y: 0, width: 320, height: 200)
         let savedFrame = UserDefaults.standard.string(forKey: windowFrameKey)
         let initialRect = savedFrame != nil ? NSRectFromString(savedFrame!) : defaultRect
@@ -111,16 +102,16 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         panel?.level = .floating
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel?.isMovableByWindowBackground = true
-        panel?.backgroundColor = NSColor.black.withAlphaComponent(0.85)
-        panel?.isOpaque = true
+        panel?.backgroundColor = NSColor.clear
+        panel?.isOpaque = false
         panel?.hasShadow = true
+        panel?.appearance = NSApp.effectiveAppearance
         panel?.delegate = self
         panel?.hidesOnDeactivate = false
         panel?.isReleasedWhenClosed = false
         panel?.minSize = NSSize(width: 250, height: 150)
         panel?.maxSize = NSSize(width: 600, height: 800)
         
-        // Position in top right if no saved position
         if savedFrame == nil {
             if let screen = NSScreen.main {
                 let screenFrame = screen.visibleFrame
@@ -131,20 +122,20 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             }
         }
         
-        // Set frame autosave name
         panel?.setFrameAutosaveName("OnMyRadarPanel")
         
-        // Listen for settings window request
         NotificationCenter.default.addObserver(self, selector: #selector(showSettings), name: NSNotification.Name("ShowSettingsWindow"), object: nil)
-        
-        // Listen for clear all tasks request
         NotificationCenter.default.addObserver(self, selector: #selector(clearAllTasks), name: NSNotification.Name("ClearAllTasks"), object: nil)
-        
-        // Listen for opacity updates
+        NotificationCenter.default.addObserver(self, selector: #selector(clearDoneTasks), name: NSNotification.Name("ClearDoneTasks"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updatePanelOpacity(_:)), name: NSNotification.Name("UpdatePanelOpacity"), object: nil)
-        
-        // Listen for about window request
         NotificationCenter.default.addObserver(self, selector: #selector(showAbout), name: NSNotification.Name("ShowAboutWindow"), object: nil)
+        
+        DistributedNotificationCenter.default.addObserver(
+            self,
+            selector: #selector(systemAppearanceChanged),
+            name: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil
+        )
     }
     
     func toggle() {
@@ -154,9 +145,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         } else {
             panel?.makeKeyAndOrderFront(nil)
             panel?.orderFrontRegardless()
-            // Activate the app to receive keyboard input
             NSApp.activate(ignoringOtherApps: true)
-            // Set initial opacity
             panel?.alphaValue = 1.0
             NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
         }
@@ -181,13 +170,11 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     }
     
     func windowDidBecomeKey(_ notification: Notification) {
-        // Set full opacity when window becomes active
         panel?.animator().alphaValue = 1.0
         NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
     }
     
     func windowDidResignKey(_ notification: Notification) {
-        // Set custom opacity when window becomes inactive
         let context = modelContainer.mainContext
         let request = FetchDescriptor<Settings>()
         
@@ -209,7 +196,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             let hostingView = NSHostingView(rootView: settingsView)
             
             settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 500),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
@@ -234,7 +221,6 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             let y = screenFrame.maxY - panelFrame.height - 40
             panel?.setFrameOrigin(NSPoint(x: x, y: y))
             
-            // Save the new position
             if let frame = panel?.frame {
                 UserDefaults.standard.set(NSStringFromRect(frame), forKey: windowFrameKey)
             }
@@ -269,12 +255,29 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         menuBarController?.clearAllTasks()
     }
     
+    @objc func clearDoneTasks() {
+        // Use the menu bar controller's implementation
+        menuBarController?.clearDoneTasks()
+    }
+    
     @objc private func updatePanelOpacity(_ notification: Notification) {
         guard let opacity = notification.userInfo?["opacity"] as? Double,
               let panel = panel,
               !panel.isKeyWindow else { return }
         
         panel.alphaValue = opacity
+    }
+    
+    @objc private func systemAppearanceChanged() {
+        // Update the panel's appearance to match the system
+        panel?.appearance = NSApp.effectiveAppearance
+        
+        // Recreate the content view to force SwiftUI to update
+        if let panel = panel {
+            let newContentView = NSHostingView(rootView: MenuBarView()
+                .modelContainer(modelContainer))
+            panel.contentView = newContentView
+        }
     }
 }
 
@@ -411,28 +414,38 @@ class MenuBarController: NSObject {
     }
     
     @objc func clearAllTasks() {
-        let alert = NSAlert()
-        alert.messageText = "Clear All Tasks?"
-        alert.informativeText = "This will permanently delete all tasks. This action cannot be undone."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Clear All")
-        alert.addButton(withTitle: "Cancel")
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            // Clear all tasks
-            Task { @MainActor in
-                let context = modelContainer.mainContext
-                let request = FetchDescriptor<Item>()
-                
-                do {
-                    let items = try context.fetch(request)
-                    for item in items {
-                        context.delete(item)
-                    }
-                    try context.save()
-                } catch {
-                    NSAlert.showError("Failed to clear tasks: \(error.localizedDescription)")
+        // Clear all tasks without confirmation
+        Task { @MainActor in
+            let context = modelContainer.mainContext
+            let request = FetchDescriptor<Item>()
+            
+            do {
+                let items = try context.fetch(request)
+                for item in items {
+                    context.delete(item)
                 }
+                try context.save()
+            } catch {
+                NSAlert.showError("Failed to clear tasks: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    @objc func clearDoneTasks() {
+        // Clear only done tasks without confirmation
+        Task { @MainActor in
+            let context = modelContainer.mainContext
+            let request = FetchDescriptor<Item>()
+            
+            do {
+                let items = try context.fetch(request)
+                let doneItems = items.filter { $0.status == .done }
+                for item in doneItems {
+                    context.delete(item)
+                }
+                try context.save()
+            } catch {
+                NSAlert.showError("Failed to clear done tasks: \(error.localizedDescription)")
             }
         }
     }

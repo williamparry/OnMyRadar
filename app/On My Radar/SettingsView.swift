@@ -1,10 +1,3 @@
-//
-//  SettingsView.swift
-//  OnMyRadar
-//
-//  Created by William Parry on 24/6/2025.
-//
-
 import SwiftUI
 import SwiftData
 import ServiceManagement
@@ -27,7 +20,6 @@ struct SettingsView: View {
     @State private var doneSymbol = "/"
     @State private var doneLabel = "done"
     @State private var inactivePanelOpacity = 0.9
-    
     
     // Timer for debouncing saves
     @State private var saveTimer: Timer?
@@ -54,7 +46,6 @@ struct SettingsView: View {
                                     try SMAppService.mainApp.unregister()
                                 }
                             } catch {
-                                print("Failed to update login item: \(error)")
                             }
                         }
                     
@@ -76,23 +67,22 @@ struct SettingsView: View {
                             }
                     }
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Inactive panel transparency:")
-                        HStack {
-                            Slider(value: $inactivePanelOpacity, in: 0.1...1.0, step: 0.1)
-                                .onChange(of: inactivePanelOpacity) { _, newValue in
-                                    autoSave()
-                                    // Post notification to update panel opacity immediately
-                                    NotificationCenter.default.post(
-                                        name: NSNotification.Name("UpdatePanelOpacity"), 
-                                        object: nil,
-                                        userInfo: ["opacity": newValue]
-                                    )
-                                }
-                            Text("\(Int(inactivePanelOpacity * 100))%")
-                                .frame(width: 40, alignment: .trailing)
-                                .monospacedDigit()
-                        }
+                    HStack(spacing: 8) {
+                        Text("Inactive transparency:")
+                            .fixedSize()
+                            .padding(.trailing, -80)
+                        Slider(value: $inactivePanelOpacity, in: 0.1...1.0, step: 0.1)
+                            .onChange(of: inactivePanelOpacity) { _, newValue in
+                                autoSave()
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("UpdatePanelOpacity"), 
+                                    object: nil,
+                                    userInfo: ["opacity": newValue]
+                                )
+                            }
+                        Text("\(Int(inactivePanelOpacity * 100))%")
+                            .frame(width: 40, alignment: .trailing)
+                            .monospacedDigit()
                     }
                 } header: {
                     Text("General")
@@ -142,19 +132,14 @@ struct SettingsView: View {
                     useSymbols = false
                     inactivePanelOpacity = 0.9
                     
-                    // Clear keybinding
                     globalHotkeyKeyCode = 0
                     globalHotkeyModifiers = 0
                     
-                    // Reset panel position
                     NotificationCenter.default.post(name: NSNotification.Name("ResetPanelPosition"), object: nil)
-                    
-                    // Auto-save the reset values
                     autoSave()
                 }
                 
                 Button("About") {
-                    // Post notification to show about window
                     NotificationCenter.default.post(name: NSNotification.Name("ShowAboutWindow"), object: nil)
                 }
                 
@@ -171,7 +156,6 @@ struct SettingsView: View {
         .frame(width: 400, height: 450)
         .contentShape(Rectangle())
         .onTapGesture {
-            // Unfocus any active text field when clicking outside
             NSApp.keyWindow?.makeFirstResponder(nil)
         }
         .onAppear {
@@ -195,10 +179,8 @@ struct SettingsView: View {
     }
     
     private func autoSave() {
-        // Cancel any existing timer
         saveTimer?.invalidate()
         
-        // Create a new timer to save after a short delay
         saveTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
             saveSettings()
         }
@@ -226,7 +208,6 @@ struct SettingsView: View {
             try modelContext.save()
             saveHotkeySettings()
         } catch {
-            print("Error saving settings: \(error)")
         }
     }
     
@@ -238,14 +219,12 @@ struct SettingsView: View {
             globalHotkeyKeyCode = UInt32(keyCode)
             globalHotkeyModifiers = UInt32(modifiers)
         }
-        // No default hotkey - user must explicitly set one
     }
     
     private func saveHotkeySettings() {
         UserDefaults.standard.set(Int(globalHotkeyKeyCode), forKey: "globalHotkeyKeyCode")
         UserDefaults.standard.set(Int(globalHotkeyModifiers), forKey: "globalHotkeyModifiers")
         
-        // Notify the app delegate to update the hotkey
         NotificationCenter.default.post(name: NSNotification.Name("UpdateGlobalHotkey"), object: nil, userInfo: [
             "keyCode": globalHotkeyKeyCode,
             "modifiers": globalHotkeyModifiers
@@ -262,6 +241,9 @@ struct StatusRow: View {
     @FocusState private var symbolFieldFocused: Bool
     @FocusState private var labelFieldFocused: Bool
     
+    @State private var symbolBeforeEdit = ""
+    @State private var labelBeforeEdit = ""
+    
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Text(title)
@@ -273,12 +255,19 @@ struct StatusRow: View {
                     .frame(width: 55, alignment: .trailing)
                 
                 TextField("", text: $symbol)
-                    .frame(width: 40)
+                    .frame(width: 50, height: 30)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.center)
                     .focused($symbolFieldFocused)
                     .onSubmit {
                         symbolFieldFocused = false
+                    }
+                    .onChange(of: symbolFieldFocused) { _, isFocused in
+                        if isFocused {
+                            symbolBeforeEdit = symbol
+                        } else if symbol.isEmpty && !symbolBeforeEdit.isEmpty {
+                            symbol = symbolBeforeEdit
+                        }
                     }
                     .onChange(of: symbol) { _, newValue in
                         if newValue.count > 1 {
@@ -294,12 +283,19 @@ struct StatusRow: View {
                     .frame(width: 40, alignment: .trailing)
                 
                 TextField("", text: $label)
-                    .frame(width: 100)
+                    .frame(width: 100, height: 30)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.center)
                     .focused($labelFieldFocused)
                     .onSubmit {
                         labelFieldFocused = false
+                    }
+                    .onChange(of: labelFieldFocused) { _, isFocused in
+                        if isFocused {
+                            labelBeforeEdit = label
+                        } else if label.isEmpty && !labelBeforeEdit.isEmpty {
+                            label = labelBeforeEdit
+                        }
                     }
                     .onChange(of: label) { _, newValue in
                         if newValue.count > 7 {

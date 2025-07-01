@@ -4,18 +4,20 @@ struct RadarBackground: View {
     @State private var rotationAngle: Double = 0
     @State private var isAnimating: Bool = false
     let shouldRotate: Bool
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         GeometryReader { geometry in
             let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
             let maxRadius = min(geometry.size.width, geometry.size.height) * 0.45
+            let radarColor = colorScheme == .light ? Color.gray : Color.green
             
             ZStack {
                 // Radar circles
                 ForEach(1..<5) { i in
                     Circle()
                         .stroke(
-                            Color.green.opacity(0.15 - Double(i) * 0.025),
+                            radarColor.opacity(0.15 - Double(i) * 0.025),
                             lineWidth: 1
                         )
                         .frame(
@@ -49,7 +51,7 @@ struct RadarBackground: View {
                         .fill(
                             RadialGradient(
                                 gradient: Gradient(colors: [
-                                    Color.green.opacity(0.12 * (1.0 - Double(i) / 20.0)),
+                                    radarColor.opacity(0.12 * (1.0 - Double(i) / 20.0)),
                                     Color.clear
                                 ]),
                                 center: UnitPoint(x: 0.5, y: 0.5),
@@ -67,7 +69,7 @@ struct RadarBackground: View {
                             y: center.y
                         ))
                     }
-                    .stroke(Color.green.opacity(0.15), lineWidth: 2)
+                    .stroke(radarColor.opacity(0.15), lineWidth: 2)
                 }
                 .rotationEffect(.degrees(rotationAngle))
                 .animation(.linear(duration: 4), value: rotationAngle)

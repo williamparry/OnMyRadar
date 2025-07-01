@@ -1,15 +1,9 @@
-//
-//  MenuBarView.swift
-//  OnMyRadar
-//
-//  Created by William Parry on 24/6/2025.
-//
-
 import SwiftUI
 import SwiftData
 
 struct MenuBarView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query(sort: \Item.order) private var items: [Item]
     @Query private var settingsArray: [Settings]
     @State private var newItemText = ""
@@ -18,6 +12,7 @@ struct MenuBarView: View {
     @State private var editingTaskId: PersistentIdentifier? = nil
     @State private var isEditMode = false
     @State private var isPanelActive = true
+    @State private var showClearOptions = false
     
     private var settings: Settings? {
         settingsArray.first
@@ -28,8 +23,8 @@ struct MenuBarView: View {
             radarBackground
             mainContent
         }
-        .background(Color.black.opacity(0.85))
-        .preferredColorScheme(.dark)
+        .background(colorScheme == .light ? Color.white.opacity(0.95) : Color.black.opacity(0.85))
+        .preferredColorScheme(colorScheme)
         .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         .overlay(borderOverlay)
         .overlay(resizeHandleOverlay, alignment: .bottomTrailing)
@@ -78,9 +73,7 @@ struct MenuBarView: View {
         .background(Color.clear)
         .contentShape(Rectangle())
         .onTapGesture {
-            // Unfocus text field when clicking outside
             isInputFocused = false
-            // This will trigger any editing task to save via onEditingChanged
             editingTaskId = nil
         }
     }
@@ -141,7 +134,6 @@ struct MenuBarView: View {
     
     private var toolbar: some View {
         HStack(spacing: 12) {
-            // Edit/Done button
             Button(action: {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isEditMode.toggle()
@@ -156,10 +148,8 @@ struct MenuBarView: View {
             
             Spacer()
             
-            // Clear Tasks button
             Button(action: {
-                // Post notification to clear tasks
-                NotificationCenter.default.post(name: NSNotification.Name("ClearAllTasks"), object: nil)
+                showClearOptions.toggle()
             }) {
                 Text("Clear Tasks")
                     .font(.system(size: 11))
@@ -167,10 +157,43 @@ struct MenuBarView: View {
             }
             .buttonStyle(.plain)
             .disabled(items.isEmpty)
+            .popover(isPresented: $showClearOptions) {
+                VStack(spacing: 0) {
+                    Button(action: {
+                        showClearOptions = false
+                        NotificationCenter.default.post(name: NSNotification.Name("ClearAllTasks"), object: nil)
+                    }) {
+                        HStack {
+                            Text("Clear all tasks")
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Divider()
+                        .padding(.horizontal, 8)
+                    
+                    Button(action: {
+                        showClearOptions = false
+                        NotificationCenter.default.post(name: NSNotification.Name("ClearDoneTasks"), object: nil)
+                    }) {
+                        HStack {
+                            Text("Clear done tasks")
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(width: 160)
+            }
             
-            // Settings button
             Button(action: {
-                // Post notification to show settings
                 NotificationCenter.default.post(name: NSNotification.Name("ShowSettingsWindow"), object: nil)
             }) {
                 Text("Settings")
@@ -187,13 +210,11 @@ struct MenuBarView: View {
     private func addItem() {
         guard !newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        // Find the highest order value
         let maxOrder = items.map { $0.order }.max() ?? -1
         let newItem = Item(title: newItemText.trimmingCharacters(in: .whitespacesAndNewlines), order: maxOrder + 1)
         modelContext.insert(newItem)
         newItemText = ""
         
-        // Trigger radar rotation
         shouldRotateRadar = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             shouldRotateRadar = false
@@ -202,10 +223,8 @@ struct MenuBarView: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error saving item: \(error)")
         }
     }
-    
     
     private func ensureSettings() {
         if settingsArray.isEmpty {
@@ -214,11 +233,9 @@ struct MenuBarView: View {
             do {
                 try modelContext.save()
             } catch {
-                print("Error creating default settings: \(error)")
             }
         }
         
-        // Ensure all items have an order value
         let itemsNeedingOrder = items.filter { $0.order == 0 }
         if !itemsNeedingOrder.isEmpty {
             for (index, item) in items.enumerated() {
@@ -227,7 +244,6 @@ struct MenuBarView: View {
             do {
                 try modelContext.save()
             } catch {
-                print("Error updating item order: \(error)")
             }
         }
     }
@@ -240,6 +256,7 @@ struct TaskRow: View {
     var onEditingChanged: ((Bool) -> Void)?
     var editingTaskId: PersistentIdentifier?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query(sort: \Item.order) private var allItems: [Item]
     @State private var isEditing = false
     @State private var editingText = ""
@@ -248,13 +265,11 @@ struct TaskRow: View {
     private var statusDisplay: String {
         if let settings = settings {
             return settings.getDisplay(for: item.status)
-        } else {
-            // Default display when no settings exist
-            switch item.status {
-            case .todo: return "on me"
-            case .waiting: return "waiting"
-            case .done: return "done"
-            }
+        }
+        switch item.status {
+        case .todo: return "on me"
+        case .waiting: return "waiting"
+        case .done: return "done"
         }
     }
     
@@ -270,7 +285,6 @@ struct TaskRow: View {
     
     var body: some View {
         HStack(spacing: 10) {
-            // Reorder Buttons - show in edit mode (but not when editing)
             if !isEditing && isEditMode {
                 VStack(spacing: 2) {
                     Button(action: moveItemUp) {
@@ -310,7 +324,6 @@ struct TaskRow: View {
                 .transition(.opacity)
             }
             
-            // Status Button
             Button(action: toggleStatus) {
                 Text(statusDisplay)
                     .font(.system(size: settings?.useSymbols == true ? 14 : 11, weight: .medium, design: settings?.useSymbols == true ? .monospaced : .default))
@@ -321,7 +334,6 @@ struct TaskRow: View {
             }
             .buttonStyle(.plain)
             
-            // Task Title
             if isEditing {
                 TextField("Task", text: $editingText)
                     .textFieldStyle(.plain)
@@ -345,7 +357,6 @@ struct TaskRow: View {
                     }
             }
             
-            // Delete Button - show for completed tasks or in edit mode (but not when editing)
             if !isEditing && (item.status == .done || isEditMode) {
                 Button(action: deleteItem) {
                     Image(systemName: "xmark.circle.fill")
@@ -358,7 +369,7 @@ struct TaskRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.white.opacity(0.08))
+        .background(colorScheme == .light ? Color.black.opacity(0.06) : Color.white.opacity(0.08))
         .contentShape(Rectangle())
         .onTapGesture {
             if isEditing {
@@ -366,7 +377,6 @@ struct TaskRow: View {
             }
         }
         .onChange(of: editingTaskId) { _, newValue in
-            // If another task started editing, save this one
             if isEditing && newValue != item.id {
                 saveEdit()
             }
@@ -409,7 +419,6 @@ struct TaskRow: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error updating item: \(error)")
         }
     }
     
@@ -419,7 +428,6 @@ struct TaskRow: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error deleting item: \(error)")
         }
     }
     
@@ -428,8 +436,6 @@ struct TaskRow: View {
               currentIndex > 0 else { return }
         
         let previousIndex = currentIndex - 1
-        
-        // Swap order values
         let tempOrder = allItems[currentIndex].order
         allItems[currentIndex].order = allItems[previousIndex].order
         allItems[previousIndex].order = tempOrder
@@ -437,7 +443,6 @@ struct TaskRow: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error moving item up: \(error)")
         }
     }
     
@@ -446,8 +451,6 @@ struct TaskRow: View {
               currentIndex < allItems.count - 1 else { return }
         
         let nextIndex = currentIndex + 1
-        
-        // Swap order values
         let tempOrder = allItems[currentIndex].order
         allItems[currentIndex].order = allItems[nextIndex].order
         allItems[nextIndex].order = tempOrder
@@ -455,10 +458,8 @@ struct TaskRow: View {
         do {
             try modelContext.save()
         } catch {
-            print("Error moving item down: \(error)")
         }
     }
-    
     
     private func startEditing() {
         editingText = item.title
@@ -476,7 +477,6 @@ struct TaskRow: View {
             do {
                 try modelContext.save()
             } catch {
-                print("Error updating item: \(error)")
             }
         }
         isEditing = false
@@ -496,5 +496,3 @@ struct TaskRow: View {
     MenuBarView()
         .modelContainer(for: Item.self, inMemory: true)
 }
-
-
