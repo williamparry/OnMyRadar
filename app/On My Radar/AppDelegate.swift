@@ -102,8 +102,8 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         panel?.level = .floating
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel?.isMovableByWindowBackground = true
-        panel?.backgroundColor = NSColor.clear
-        panel?.isOpaque = false
+        panel?.backgroundColor = NSColor.windowBackgroundColor
+        panel?.isOpaque = true
         panel?.hasShadow = true
         panel?.appearance = NSApp.effectiveAppearance
         panel?.delegate = self
@@ -147,6 +147,8 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             panel?.orderFrontRegardless()
             NSApp.activate(ignoringOtherApps: true)
             panel?.alphaValue = 1.0
+            panel?.isOpaque = true
+            panel?.backgroundColor = NSColor.windowBackgroundColor
             NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
         }
     }
@@ -171,6 +173,8 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
     
     func windowDidBecomeKey(_ notification: Notification) {
         panel?.animator().alphaValue = 1.0
+        panel?.isOpaque = true
+        panel?.backgroundColor = NSColor.windowBackgroundColor
         NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeActive"), object: nil)
     }
     
@@ -182,8 +186,12 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             let settings = try context.fetch(request).first
             let opacity = settings?.inactivePanelOpacity ?? 0.9
             panel?.animator().alphaValue = opacity
+            panel?.isOpaque = false
+            panel?.backgroundColor = NSColor.clear
         } catch {
             panel?.animator().alphaValue = 0.9
+            panel?.isOpaque = false
+            panel?.backgroundColor = NSColor.clear
         }
         NotificationCenter.default.post(name: NSNotification.Name("PanelDidBecomeInactive"), object: nil)
     }
