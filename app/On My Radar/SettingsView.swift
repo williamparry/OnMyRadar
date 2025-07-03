@@ -5,6 +5,8 @@ import Carbon
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityShowButtonShapes) private var showButtonShapes
     @Query private var settingsArray: [Settings]
     
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -24,6 +26,14 @@ struct SettingsView: View {
     // Timer for debouncing saves
     @State private var saveTimer: Timer?
     
+    // Focus states
+    @FocusState private var launchAtLoginFocused: Bool
+    @FocusState private var useSymbolsFocused: Bool
+    @FocusState private var sliderFocused: Bool
+    @FocusState private var resetButtonFocused: Bool
+    @FocusState private var aboutButtonFocused: Bool
+    @FocusState private var quitButtonFocused: Bool
+    
     private var settings: Settings? {
         settingsArray.first
     }
@@ -35,6 +45,21 @@ struct SettingsView: View {
                 // General Settings Section
                 Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
+                        .focusable()
+                        .focused($launchAtLoginFocused)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.accentColor, lineWidth: 2)
+                                .padding(-4)
+                                .opacity(launchAtLoginFocused && showButtonShapes ? 1 : 0)
+                        )
+                        .onKeyPress { key in
+                            if key.key == .space {
+                                launchAtLogin.toggle()
+                                return .handled
+                            }
+                            return .ignored
+                        }
                         .onChange(of: launchAtLogin) { _, newValue in
                             do {
                                 if newValue {
@@ -50,6 +75,21 @@ struct SettingsView: View {
                         }
                     
                     Toggle("Use symbols instead of text labels", isOn: $useSymbols)
+                        .focusable()
+                        .focused($useSymbolsFocused)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.accentColor, lineWidth: 2)
+                                .padding(-4)
+                                .opacity(useSymbolsFocused && showButtonShapes ? 1 : 0)
+                        )
+                        .onKeyPress { key in
+                            if key.key == .space {
+                                useSymbols.toggle()
+                                return .handled
+                            }
+                            return .ignored
+                        }
                         .onChange(of: useSymbols) { _, _ in
                             autoSave()
                         }
@@ -72,6 +112,26 @@ struct SettingsView: View {
                             .fixedSize()
                             .padding(.trailing, -80)
                         Slider(value: $inactivePanelOpacity, in: 0.1...1.0, step: 0.1)
+                            .focusable()
+                            .focused($sliderFocused)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.accentColor, lineWidth: 2)
+                                    .padding(-4)
+                                    .opacity(sliderFocused && showButtonShapes ? 1 : 0)
+                            )
+                            .onKeyPress { key in
+                                switch key.key {
+                                case .leftArrow:
+                                    inactivePanelOpacity = max(0.1, inactivePanelOpacity - 0.1)
+                                    return .handled
+                                case .rightArrow:
+                                    inactivePanelOpacity = min(1.0, inactivePanelOpacity + 0.1)
+                                    return .handled
+                                default:
+                                    return .ignored
+                                }
+                            }
                             .onChange(of: inactivePanelOpacity) { _, newValue in
                                 autoSave()
                                 NotificationCenter.default.post(
@@ -138,14 +198,38 @@ struct SettingsView: View {
                     NotificationCenter.default.post(name: NSNotification.Name("ResetPanelPosition"), object: nil)
                     autoSave()
                 }
+                .focusable()
+                .focused($resetButtonFocused)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.accentColor, lineWidth: 2)
+                        .padding(-4)
+                        .opacity(resetButtonFocused && showButtonShapes ? 1 : 0)
+                )
                 
                 Button("About") {
                     NotificationCenter.default.post(name: NSNotification.Name("ShowAboutWindow"), object: nil)
                 }
+                .focusable()
+                .focused($aboutButtonFocused)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.accentColor, lineWidth: 2)
+                        .padding(-4)
+                        .opacity(aboutButtonFocused && showButtonShapes ? 1 : 0)
+                )
                 
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
+                .focusable()
+                .focused($quitButtonFocused)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.accentColor, lineWidth: 2)
+                        .padding(-4)
+                        .opacity(quitButtonFocused && showButtonShapes ? 1 : 0)
+                )
                 .foregroundColor(.red)
                 
                 Spacer()

@@ -8,24 +8,49 @@
 import SwiftUI
 import Carbon
 
+class ShortcutRecorderTextField: NSTextField {
+    var onActivate: (() -> Void)?
+    
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36 || event.keyCode == 49 { // Return or Space
+            onActivate?()
+        } else {
+            super.keyDown(with: event)
+        }
+    }
+    
+    override var acceptsFirstResponder: Bool {
+        return true
+    }
+}
+
 struct ShortcutRecorderView: NSViewRepresentable {
     @Binding var keyCode: UInt32
     @Binding var modifiers: UInt32
     
     func makeNSView(context: Context) -> NSTextField {
-        let textField = NSTextField()
+        let textField = ShortcutRecorderTextField()
         textField.isEditable = false
         textField.isSelectable = false
         textField.isBordered = true
         textField.bezelStyle = .roundedBezel
         textField.placeholderString = "Click to record shortcut"
         textField.alignment = .center
+        textField.focusRingType = .default
         
         updateTextField(textField)
         
         // Add click gesture
         let clickGesture = NSClickGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.startRecording(_:)))
         textField.addGestureRecognizer(clickGesture)
+        
+        // Set up keyboard activation
+        textField.onActivate = {
+            context.coordinator.startRecordingFromKeyboard(textField)
+        }
+        
+        // Store reference in coordinator
+        context.coordinator.textField = textField
         
         return textField
     }
@@ -135,6 +160,10 @@ struct ShortcutRecorderView: NSViewRepresentable {
         
         @objc func startRecording(_ sender: NSClickGestureRecognizer) {
             guard let textField = sender.view as? NSTextField else { return }
+            startRecordingFromKeyboard(textField)
+        }
+        
+        func startRecordingFromKeyboard(_ textField: NSTextField) {
             self.textField = textField
             
             textField.stringValue = "Type shortcut or ESC to clear"
