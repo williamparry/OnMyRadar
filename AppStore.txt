@@ -1,0 +1,70 @@
+App Store Listing Content
+
+Promotional Text (170 characters max)
+Keep your tasks in sight. Lightning-fast menu bar task manager with customizable status tracking. Simple, elegant, and always one click away.
+
+Description (4000 characters max)
+On My Radar is the task manager that lives where you work – right in your menu bar. No more switching between apps or losing focus. Your tasks are always just one click away.
+
+DESIGNED FOR FOCUS
+• Clean, minimal interface that stays out of your way
+• Quick task entry with instant save
+• Zero loading time – your tasks appear instantly
+• Transparent background option to maintain your flow
+
+SMART STATUS TRACKING
+Track your tasks with three simple states:
+• On Me – Tasks you're actively working on
+• Waiting – Tasks blocked or awaiting response  
+• Done – Completed tasks for that satisfaction boost
+
+BUILT FOR PRODUCTIVITY
+• Global keyboard shortcut for instant access
+• Click to edit tasks inline
+• Visual status indicators at a glance
+• Customizable status labels to match your workflow
+
+PERSONALIZE YOUR EXPERIENCE
+• Choose between symbols or text for status display
+• Adjust panel transparency
+• Configure your preferred keyboard shortcut
+• Tailor status labels to your terminology
+
+PRIVACY FIRST
+• All data stored locally on your Mac
+• No cloud services or internet connection required
+• Your tasks never leave your device
+• Complete privacy and data ownership
+• Open source - verify our privacy claims on GitHub
+
+NATIVE PERFORMANCE
+Built with SwiftUI for optimal macOS integration:
+• Minimal CPU and memory usage
+• Instant response times
+• Battery-efficient operation
+• Seamless macOS experience
+
+Perfect for developers, designers, writers, and anyone who values a clean workspace and efficient task management. On My Radar keeps your tasks visible without cluttering your screen or disrupting your workflow.
+
+Your tasks, your way, always on your radar.
+
+Keywords (100 characters max)
+task,manager,menu,bar,productivity,todo,list,minimal,tasks,tracker,organizer,reminder,planner,status
+
+Additional App Store Fields
+
+Subtitle (30 characters max)
+Menu bar task manager
+
+Categories
+- Primary: Productivity
+- Secondary: Utilities
+
+Privacy Policy URL
+https://onmyradar.williamparry.com/privacy.html
+
+Support URL
+https://github.com/williamparry/OnMyRadar/issues
+
+Marketing URL
+https://onmyradar.williamparry.com
