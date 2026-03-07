@@ -12,6 +12,10 @@ struct ShortcutRecorderView: NSViewRepresentable {
     @Binding var keyCode: UInt32
     @Binding var modifiers: UInt32
     
+    static func dismantleNSView(_ nsView: NSTextField, coordinator: Coordinator) {
+        coordinator.stopRecording()
+    }
+    
     func makeNSView(context: Context) -> NSTextField {
         let textField = NSTextField()
         textField.isEditable = false
@@ -133,8 +137,13 @@ struct ShortcutRecorderView: NSViewRepresentable {
             self.parent = parent
         }
         
+        deinit {
+            stopRecording()
+        }
+        
         @objc func startRecording(_ sender: NSClickGestureRecognizer) {
             guard let textField = sender.view as? NSTextField else { return }
+            stopRecording()
             self.textField = textField
             
             textField.stringValue = "Type shortcut or ESC to clear"
@@ -147,6 +156,18 @@ struct ShortcutRecorderView: NSViewRepresentable {
             }
         }
         
+        func stopRecording() {
+            if let monitor = eventMonitor {
+                NSEvent.removeMonitor(monitor)
+                eventMonitor = nil
+            }
+            
+            if let textField {
+                textField.textColor = .labelColor
+                parent.updateTextField(textField)
+            }
+        }
+        
         private func handleKeyEvent(_ event: NSEvent) {
             // Check for escape key to clear
             if event.keyCode == 0x35 { // Escape key
@@ -155,14 +176,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
                 parent.modifiers = 0
                 
                 // Stop monitoring
-                if let monitor = eventMonitor {
-                    NSEvent.removeMonitor(monitor)
-                    eventMonitor = nil
-                }
-                
-                // Reset text field appearance
-                textField?.textColor = .labelColor
-                parent.updateTextField(textField!)
+                stopRecording()
                 return
             }
             
@@ -188,14 +202,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
             parent.modifiers = modifiers
             
             // Stop monitoring
-            if let monitor = eventMonitor {
-                NSEvent.removeMonitor(monitor)
-                eventMonitor = nil
-            }
-            
-            // Reset text field appearance
-            textField?.textColor = .labelColor
-            parent.updateTextField(textField!)
+            stopRecording()
         }
     }
 }

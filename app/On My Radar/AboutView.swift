@@ -8,6 +8,22 @@
 import SwiftUI
 
 struct AboutView: View {
+    private var versionText: String {
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        
+        switch (shortVersion, build) {
+        case let (shortVersion?, build?) where shortVersion != build:
+            return "Version \(shortVersion) (\(build))"
+        case let (shortVersion?, _):
+            return "Version \(shortVersion)"
+        case let (_, build?):
+            return "Version \(build)"
+        default:
+            return "Version"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             // App icon
@@ -20,7 +36,7 @@ struct AboutView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
-            Text("Version 1.0")
+            Text(versionText)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
@@ -37,9 +53,11 @@ struct AboutView: View {
             }
             .padding(.horizontal, 40)
             
-            Link("onmyradar.williamparry.com", destination: URL(string: "https://onmyradar.williamparry.com")!)
-                .font(.footnote)
-                .foregroundColor(.accentColor)
+            if let url = URL(string: "https://onmyradar.williamparry.com") {
+                Link("onmyradar.williamparry.com", destination: url)
+                    .font(.footnote)
+                    .foregroundColor(.accentColor)
+            }
             
             Spacer()
         }
@@ -47,4 +65,3 @@ struct AboutView: View {
         .frame(width: 450, height: 400)
     }
 }
-

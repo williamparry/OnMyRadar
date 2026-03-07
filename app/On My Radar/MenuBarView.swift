@@ -79,20 +79,26 @@ struct MenuBarView: View {
     }
     
     private var taskListContent: some View {
-        VStack(spacing: 6) {
-            ForEach(items) { item in
-                taskRowFor(item)
+        let indexedItems = Array(items.enumerated())
+        
+        return LazyVStack(spacing: 6) {
+            ForEach(indexedItems, id: \.element.id) { index, item in
+                taskRowFor(item, index: index, itemCount: indexedItems.count)
             }
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
     }
     
-    private func taskRowFor(_ item: Item) -> some View {
+    private func taskRowFor(_ item: Item, index: Int, itemCount: Int) -> some View {
         TaskRow(
             item: item,
             settings: settings,
             isEditMode: isEditMode,
+            canMoveUp: index > 0,
+            canMoveDown: index < itemCount - 1,
+            onMoveUp: { moveItem(item, direction: -1) },
+            onMoveDown: { moveItem(item, direction: 1) },
             onEditingChanged: { isEditing in
                 if isEditing {
                     editingTaskId = item.id
@@ -236,15 +242,48 @@ struct MenuBarView: View {
             }
         }
         
-        let itemsNeedingOrder = items.filter { $0.order == 0 }
-        if !itemsNeedingOrder.isEmpty {
-            for (index, item) in items.enumerated() {
-                item.order = index
-            }
-            do {
-                try modelContext.save()
-            } catch {
-            }
+        normalizeItemOrderIfNeeded()
+    }
+    
+    private func normalizeItemOrderIfNeeded() {
+        guard !items.isEmpty else { return }
+        
+        // Fast path: most of the time items are already normalized (0..n-1) in query order.
+        var needsNormalization = false
+        for (expectedOrder, item) in items.enumerated() where item.order != expectedOrder {
+            needsNormalization = true
+            break
+        }
+        guard needsNormalization else { return }
+        
+        let sortedItems = items.sorted { lhs, rhs in
+            if lhs.order != rhs.order { return lhs.order < rhs.order }
+            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            return lhs.updatedAt < rhs.updatedAt
+        }
+        
+        for (order, item) in sortedItems.enumerated() {
+            item.order = order
+        }
+        do {
+            try modelContext.save()
+        } catch {
+        }
+    }
+    
+    private func moveItem(_ item: Item, direction: Int) {
+        guard let currentIndex = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let targetIndex = currentIndex + direction
+        guard targetIndex >= 0, targetIndex < items.count else { return }
+        
+        let adjacentItem = items[targetIndex]
+        let tempOrder = item.order
+        item.order = adjacentItem.order
+        adjacentItem.order = tempOrder
+        
+        do {
+            try modelContext.save()
+        } catch {
         }
     }
 }
@@ -253,11 +292,14 @@ struct TaskRow: View {
     let item: Item
     let settings: Settings?
     let isEditMode: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let onMoveUp: () -> Void
+    let onMoveDown: () -> Void
     var onEditingChanged: ((Bool) -> Void)?
     var editingTaskId: PersistentIdentifier?
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
-    @Query(sort: \Item.order) private var allItems: [Item]
     @State private var isEditing = false
     @State private var editingText = ""
     @FocusState private var isTextFieldFocused: Bool
@@ -273,21 +315,11 @@ struct TaskRow: View {
         }
     }
     
-    private var canMoveUp: Bool {
-        guard let currentIndex = allItems.firstIndex(where: { $0.id == item.id }) else { return false }
-        return currentIndex > 0
-    }
-    
-    private var canMoveDown: Bool {
-        guard let currentIndex = allItems.firstIndex(where: { $0.id == item.id }) else { return false }
-        return currentIndex < allItems.count - 1
-    }
-    
     var body: some View {
         HStack(spacing: 10) {
             if !isEditing && isEditMode {
                 VStack(spacing: 2) {
-                    Button(action: moveItemUp) {
+                    Button(action: onMoveUp) {
                         Image(systemName: "chevron.up")
                             .foregroundColor(.secondary.opacity(0.7))
                             .font(.system(size: 6, weight: .medium))
@@ -304,7 +336,7 @@ struct TaskRow: View {
                     .disabled(!canMoveUp)
                     .opacity(canMoveUp ? 1.0 : 0.3)
                     
-                    Button(action: moveItemDown) {
+                    Button(action: onMoveDown) {
                         Image(systemName: "chevron.down")
                             .foregroundColor(.secondary.opacity(0.7))
                             .font(.system(size: 6, weight: .medium))
@@ -424,36 +456,6 @@ struct TaskRow: View {
     
     private func deleteItem() {
         modelContext.delete(item)
-        
-        do {
-            try modelContext.save()
-        } catch {
-        }
-    }
-    
-    private func moveItemUp() {
-        guard let currentIndex = allItems.firstIndex(where: { $0.id == item.id }),
-              currentIndex > 0 else { return }
-        
-        let previousIndex = currentIndex - 1
-        let tempOrder = allItems[currentIndex].order
-        allItems[currentIndex].order = allItems[previousIndex].order
-        allItems[previousIndex].order = tempOrder
-        
-        do {
-            try modelContext.save()
-        } catch {
-        }
-    }
-    
-    private func moveItemDown() {
-        guard let currentIndex = allItems.firstIndex(where: { $0.id == item.id }),
-              currentIndex < allItems.count - 1 else { return }
-        
-        let nextIndex = currentIndex + 1
-        let tempOrder = allItems[currentIndex].order
-        allItems[currentIndex].order = allItems[nextIndex].order
-        allItems[nextIndex].order = tempOrder
         
         do {
             try modelContext.save()

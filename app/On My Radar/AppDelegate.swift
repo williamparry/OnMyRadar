@@ -24,28 +24,35 @@ class GlobalHotkeyManager {
         var eventHotKey: EventHotKeyRef?
         let userData = Unmanaged.passUnretained(self).toOpaque()
         
-        RegisterEventHotKey(keyCode, modifiers, hotkeyID, GetApplicationEventTarget(), 0, &eventHotKey)
-        self.eventHotKey = eventHotKey
-        
-        if let handler = GlobalHotkeyManager.eventHandler {
-            RemoveEventHandler(handler)
-            GlobalHotkeyManager.eventHandler = nil
+        let registerStatus = RegisterEventHotKey(keyCode, modifiers, hotkeyID, GetApplicationEventTarget(), 0, &eventHotKey)
+        guard registerStatus == noErr, eventHotKey != nil else {
+            self.onHotkey = nil
+            return
         }
+        self.eventHotKey = eventHotKey
         
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         let handlerWithUserData: EventHandlerUPP = { _, _, userData in
-            let manager = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData!).takeUnretainedValue()
+            guard let userData else { return noErr }
+            let manager = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData).takeUnretainedValue()
             manager.onHotkey?()
             return noErr
         }
         
-        InstallEventHandler(GetApplicationEventTarget(), handlerWithUserData, 1, &eventType, userData, &GlobalHotkeyManager.eventHandler)
+        let handlerStatus = InstallEventHandler(GetApplicationEventTarget(), handlerWithUserData, 1, &eventType, userData, &GlobalHotkeyManager.eventHandler)
+        if handlerStatus != noErr {
+            unregisterHotkey()
+        }
     }
     
     func unregisterHotkey() {
         if let eventHotKey = eventHotKey {
             UnregisterEventHotKey(eventHotKey)
             self.eventHotKey = nil
+        }
+        if let handler = GlobalHotkeyManager.eventHandler {
+            RemoveEventHandler(handler)
+            GlobalHotkeyManager.eventHandler = nil
         }
         onHotkey = nil
     }
@@ -99,6 +106,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
         
         panel?.contentView = contentView
         panel?.title = "On My Radar"
+        panel?.isRestorable = false
         panel?.level = .floating
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel?.isMovableByWindowBackground = true
@@ -211,6 +219,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             )
             
             settingsWindow?.title = "On My Radar Settings"
+            settingsWindow?.isRestorable = false
             settingsWindow?.contentView = hostingView
             settingsWindow?.center()
             settingsWindow?.isReleasedWhenClosed = false
@@ -248,6 +257,7 @@ class FloatingPanelController: NSObject, NSWindowDelegate {
             )
             
             aboutWindow?.title = "About On My Radar"
+            aboutWindow?.isRestorable = false
             aboutWindow?.contentView = hostingView
             aboutWindow?.center()
             aboutWindow?.isReleasedWhenClosed = false
@@ -325,7 +335,7 @@ class MenuBarController: NSObject {
         
         // Auto-open panel on app launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+            self?.togglePanel(nil)
         }
     }
     
@@ -369,10 +379,9 @@ class MenuBarController: NSObject {
         return image
     }
     
-    @objc private func togglePanel(_ sender: NSStatusBarButton) {
-        let event = NSApp.currentEvent!
-        
-        if event.type == .rightMouseUp {
+    @objc private func togglePanel(_ sender: Any?) {
+        // `NSApp.currentEvent` can be `nil` when triggered programmatically (e.g. at login / after upgrades).
+        if NSApp.currentEvent?.type == .rightMouseUp {
             showContextMenu()
         } else {
             ensureFloatingPanel()
@@ -492,7 +501,9 @@ class MenuBarController: NSObject {
         // Only register if user has explicitly set a hotkey
         if keyCode > 0 && modifiers > 0 {
             hotkeyManager.registerHotkey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
-                self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+                DispatchQueue.main.async { [weak self] in
+                    self?.togglePanel(nil)
+                }
             }
         }
     }
@@ -503,7 +514,9 @@ class MenuBarController: NSObject {
         
         if keyCode > 0 && modifiers > 0 {
             hotkeyManager.registerHotkey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
-                self?.togglePanel(self?.statusItem?.button ?? NSStatusBarButton())
+                DispatchQueue.main.async { [weak self] in
+                    self?.togglePanel(nil)
+                }
             }
         } else {
             // Clear the hotkey
@@ -517,6 +530,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var modelContainer: ModelContainer?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // This is a menu-bar app; opt out of macOS "Resume" window restoration to avoid
+        // relaunch/reopen prompts after crashes or upgrades.
+        NSApp.disableRelaunchOnLogin()
+        
         // Hide dock icon
         NSApp.setActivationPolicy(.accessory)
         
@@ -553,6 +570,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         return .terminateNow
+    }
+    
+    func applicationShouldSaveApplicationState(_ app: NSApplication) -> Bool {
+        false
+    }
+    
+    func applicationShouldRestoreApplicationState(_ app: NSApplication) -> Bool {
+        false
     }
 }
 
